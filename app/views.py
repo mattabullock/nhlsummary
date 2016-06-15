@@ -1,6 +1,8 @@
+from app import app, db
 from flask import request, render_template
 from models.Player import Player
-from app import app, db
+from models.Event import Event
+from models.PlayerEvent import PlayerEvent
 import requests
 import json
 from datetime import datetime
@@ -14,7 +16,9 @@ def data():
     # game_id = request.args.get('gameid')
     game_id='2015020884'
     page_data = getData(game_id).text
-    return getPlayers(page_data)
+    getPlayers(page_data)
+    getEvents(page_data)
+    return "nothing"
 
 def getPlayers(page_data):
     json_data = json.loads(page_data)
@@ -49,13 +53,68 @@ def getPlayers(page_data):
             new_player = Player(params)
             db.session.add(new_player)
 
-        playerObjects.append(new_player.getJSON())
+    db.session.commit()
+
+def getEvents(page_data):
+    json_data = json.loads(page_data)
+    all_plays = json_data['liveData']['plays']['allPlays']
+    game_id = json_data['gamePk']
+    print game_id
+
+    event_ids = [event['about']['eventId'] for event in all_plays]
+    db_events = Event.query.filter_by(game_id=game_id).filter(Event.id.in_(event_ids))
+    for event in all_plays:
+        db_hit = False
+        for ev in db_events:
+            if ev.game_id == game_id and ev.event_id == event['about']['eventId']:
+                db_hit = True
+        if db_hit:
+            new_event = event
+        else:
+            if 'x' in event['coordinates'].keys():
+                x_coord = event['coordinates']['x'];
+                y_coord = event['coordinates']['y'];
+            else:
+                x_coord = None
+                y_coord = None
+            if 'team' in event.keys():
+                team_id = event['team']['id']
+            else:
+                team_id = None
+            params = {
+                'game_id' : game_id,
+                'event' : event['result']['event'],
+                'event_type_id' : event['result']['eventTypeId'],
+                'event_code' : event['result']['eventCode'],
+                'event_idx' : event['about']['eventIdx'],
+                'event_id' : event['about']['eventId'],
+                'period' : event['about']['period'],
+                'period_type' : event['about']['periodType'],
+                'period_time' : event['about']['periodTime'],
+                'date_time' : datetime.strptime(event['about']['dateTime'], '%Y-%m-%dT%H:%M:%SZ'),
+                'home_goals' : event['about']['goals']['home'],
+                'away_goals' : event['about']['goals']['away'],
+                'x_coord' : x_coord,
+                'y_coord' : y_coord,
+                'team_id' : team_id
+            }
+            new_event = Event(params)
+            db.session.add(new_event)
+
+            for player in event['players']:
+                params = {
+                    'event_id' : new_event.id,
+                    'player_id' : player['player']['id'],
+                    'player_type' : player['playerType']
+                }
+                new_player_event = PlayerEvent(params)
+                db.session.add(new_player_event)
 
     db.session.commit()
-    return json.dumps(playerObjects)
+    return "everything"
 
 def getData(game_id):
-    url = 'http://statsapi.web.nhl.com/api/v1/game/' + game_id + '/feed/live'
+    url = 'https://statsapi.web.nhl.com/api/v1/game/' + game_id + '/feed/live'
     return requests.get(url)
 
 if __name__ == "__main__":

@@ -1,12 +1,15 @@
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 from app import db
 import json
 
 class Player(db.Model):
+
     player_id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(30), nullable=False)
     last_name = db.Column(db.String(30), nullable=False)
     birth_date = db.Column(db.DateTime, nullable=False)
+    current_age = db.Column(db.Integer, nullable=False)
     birth_city = db.Column(db.String(30), nullable=False)
     birth_state_providence = db.Column(db.String(30))
     birth_country = db.Column(db.String(30), nullable=False)
@@ -18,7 +21,8 @@ class Player(db.Model):
     rookie = db.Column(db.Boolean, nullable=False)
     shoots_catches = db.Column(db.String(1), nullable=False)
     roster_status = db.Column(db.String(1), nullable=False)
-    current_team_id = db.Column(db.Integer, nullable=False)
+    #current_team_id = db.Column(db.Integer, db.ForeignKey('team.team_id'))
+    current_team_id = db.Column(db.Integer, nullable=False) #TODO: uncomment line above for prod
     primary_position = db.Column(db.String(2), nullable=False)
 
     def __init__(self, params):
@@ -41,10 +45,3 @@ class Player(db.Model):
         self.current_team_id = params['current_team_id']
         self.primary_position = params['primary_position']
 
-    def getJSON(self):
-        obj = {
-            'player_id' : self.player_id,
-            'first_name' : self.first_name,
-            'last_name' : self.last_name
-        }
-        return json.dumps(obj)
