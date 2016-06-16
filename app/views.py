@@ -29,7 +29,7 @@ def grab():
     return "nothing"
 
 def getFromSchedule(start_date, end_date):
-    url = 'https://statsapi.web.nhl.com/api/v1/schedule?startDate='+start_date+'&endDate='+end_date
+    url = 'http://statsapi.web.nhl.com/api/v1/schedule?startDate='+start_date+'&endDate='+end_date
     page_data = requests.get(url).text
     json_data = json.loads(page_data)
     for date in json_data['dates']:
@@ -156,7 +156,7 @@ def getGame(page_data):
     db.session.commit()
 
 def getData(game_id):
-    url = 'https://statsapi.web.nhl.com/api/v1/game/' + str(game_id) + '/feed/live'
+    url = 'http://statsapi.web.nhl.com/api/v1/game/' + str(game_id) + '/feed/live'
     return requests.get(url)
 
 if __name__ == "__main__":
