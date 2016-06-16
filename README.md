@@ -1,7 +1,6 @@
 # NHLSummary
 
 ## TODO
-1. Fix game_id in event.
-2. Fix event_id in PlayerEvent.
-3. Add Game and Team models.
+1. Add Team models.
+2. Figure out structure so this isn't a jumbled mess
 
