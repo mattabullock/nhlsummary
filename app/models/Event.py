@@ -6,8 +6,7 @@ import json
 class Event(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
-    #game_id = db.Column(db.Integer, db.ForeignKey('game.game_id'))
-    game_id = db.Column(db.Integer) #TODO: enable line above for prod
+    game_id = db.Column(db.Integer, db.ForeignKey('game.game_id'))
     event = db.Column(db.String(100), nullable=False)
     event_type_id = db.Column(db.String(100), nullable=False)
     event_code = db.Column(db.String(10), nullable=False)
