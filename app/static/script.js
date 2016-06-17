@@ -1,8 +1,9 @@
 $(function() {
 
     $.ajax({
-        url:'data'
+        url:'data?gameid=2015020884'
     }).done(function(data) {
+        console.log(data);
         drawBoard(data);
     });
 

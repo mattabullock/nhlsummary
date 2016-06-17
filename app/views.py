@@ -15,13 +15,13 @@ def index():
 @app.route("/data")
 def data():
     game_id = request.args.get('gameid')
-    #game_id='2015020884'
-    game = Game.query.filter(game_id=game_id).first()
-    if not game:
+    game = Game.query.filter_by(game_id=game_id).first()
+    print game
+    if game is None:
         response = fullLoad(game_id)
     else:
-        response = 'nothing'
-    return response
+        response = loadFromDB(game)
+    return 'asdf'
 
 @app.route("/scheduleGrab")
 def grab():
@@ -37,11 +37,16 @@ def getFromSchedule(start_date, end_date):
         for game in date['games']:
             fullLoad(game['gamePk'])
 
+def loadFromDB(game):
+    events = Event.query.join(PlayerEvent, Event.id==PlayerEvent.event_id).filter(Event.game_id==game.game_id).all()
+    return 'asdf'
+
 def fullLoad(game_id):
     page_data = getData(game_id).text
     players = getPlayers(page_data)
     getGame(page_data)
     getEvents(page_data)
+    return 'asdf'
 
 def getPlayers(page_data):
     json_data = json.loads(page_data)
@@ -125,7 +130,7 @@ def getEvents(page_data):
 
             for player in event['players']:
                 params = {
-                    'event_id' : new_event.game_id,
+                    'event_id' : new_event.id,
                     'player_id' : player['player']['id'],
                     'player_type' : player['playerType']
                 }
