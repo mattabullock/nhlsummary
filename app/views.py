@@ -16,17 +16,30 @@ def index():
 def data():
     game_id = request.args.get('gameid')
     game = Game.query.filter_by(game_id=game_id).first()
-    print game
     if game is None:
         response = fullLoad(game_id)
     else:
         response = loadFromDB(game)
-    return 'asdf'
+    keys = ['event', 'player_event', 'player', 'player_two', 'player_event_two']
+    new_list = [dict(zip(keys,r)) for r in response]
+    return json.dumps(new_list, default=json_serial)
 
 @app.route("/scheduleGrab")
 def grab():
     getFromSchedule('2015-10-01', '2016-06-15')
     return "nothing"
+
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if isinstance(obj, datetime):
+        serial = obj.isoformat()
+        return serial
+    elif isinstance(obj, Player) or isinstance(obj, PlayerEvent) or isinstance(obj, Event):
+        return obj.__dict__
+    else:
+        return ""
+    raise TypeError ("Type not serializable")
 
 def getFromSchedule(start_date, end_date):
     url = 'http://statsapi.web.nhl.com/api/v1/schedule?startDate='+start_date+'&endDate='+end_date
@@ -38,15 +51,27 @@ def getFromSchedule(start_date, end_date):
             fullLoad(game['gamePk'])
 
 def loadFromDB(game):
-    events = Event.query.join(PlayerEvent, Event.id==PlayerEvent.event_id).filter(Event.game_id==game.game_id).all()
-    return 'asdf'
+    player_alias = db.aliased(Player, name='Player2')
+    player_event_alias = db.aliased(PlayerEvent, name='PlayerEvent2')
+    events = db.session.query(Event, PlayerEvent, Player, player_alias, player_event_alias) \
+                .join(PlayerEvent) \
+                .join(Player) \
+                .join(player_event_alias) \
+                .join(player_alias) \
+                .filter(Event.id==PlayerEvent.event_id) \
+                .filter(Event.id==player_event_alias.event_id) \
+                .filter(PlayerEvent.player_id==Player.player_id) \
+                .filter(player_event_alias.player_id==player_alias.player_id) \
+                .filter(Event.game_id==game.game_id) \
+                .all()
+    return events
 
 def fullLoad(game_id):
     page_data = getData(game_id).text
     players = getPlayers(page_data)
-    getGame(page_data)
+    game = getGame(page_data)
     getEvents(page_data)
-    return 'asdf'
+    return loadFromDB(game)
 
 def getPlayers(page_data):
     json_data = json.loads(page_data)
@@ -127,6 +152,7 @@ def getEvents(page_data):
             }
             new_event = Event(params)
             db.session.add(new_event)
+            db.session.commit() #TODO: fix this being super slow and too many writes
 
             for player in event['players']:
                 params = {
@@ -159,6 +185,7 @@ def getGame(page_data):
         db.session.add(new_game)
 
     db.session.commit()
+    return new_game
 
 def getData(game_id):
     url = 'http://statsapi.web.nhl.com/api/v1/game/' + str(game_id) + '/feed/live'
