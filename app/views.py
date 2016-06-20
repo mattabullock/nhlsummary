@@ -20,7 +20,7 @@ def data():
         response = fullLoad(game_id)
     else:
         response = loadFromDB(game)
-    keys = ['event', 'player_event', 'player', 'player_two', 'player_event_two']
+    keys = ['player', 'player_event', 'player_two', 'player_two_event', 'event']
     new_list = [dict(zip(keys,r)) for r in response]
     return json.dumps(new_list, default=json_serial)
 
@@ -53,16 +53,12 @@ def getFromSchedule(start_date, end_date):
 def loadFromDB(game):
     player_alias = db.aliased(Player, name='Player2')
     player_event_alias = db.aliased(PlayerEvent, name='PlayerEvent2')
-    events = db.session.query(Event, PlayerEvent, Player, player_alias, player_event_alias) \
-                .join(PlayerEvent) \
-                .join(Player) \
-                .join(player_event_alias) \
-                .join(player_alias) \
-                .filter(Event.id==PlayerEvent.event_id) \
-                .filter(Event.id==player_event_alias.event_id) \
+    events = db.session.query(Player, PlayerEvent, player_alias, player_event_alias, Event) \
                 .filter(PlayerEvent.player_id==Player.player_id) \
+                .filter(Player.player_id!=player_alias.player_id) \
                 .filter(player_event_alias.player_id==player_alias.player_id) \
-                .filter(Event.game_id==game.game_id) \
+                .filter(PlayerEvent.event_id==Event.event_id) \
+                .filter(PlayerEvent.event_id==player_event_alias.event_id) \
                 .all()
     return events
 
@@ -152,7 +148,7 @@ def getEvents(page_data):
             }
             new_event = Event(params)
             db.session.add(new_event)
-            db.session.commit() #TODO: fix this being super slow and too many writes
+            db.session.commit() #TODO: Fix inserting the wrong event_id into playerevents
 
             for player in event['players']:
                 params = {
